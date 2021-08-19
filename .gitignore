@@ -1,0 +1,6 @@
+/.gradle/
+/.idea/
+/ble_mesh-android_api_high-release/build/
+/ble_mesh-android_api_low-release/build/
+/build/
+/gradle/
