@@ -42,7 +42,7 @@ class MainActivity : DaggerAppCompatActivity(), MainActivityView {
 
         setContentView(R.layout.activity_main)
 
-        showFragment(MainFragment(), false, false)
+        showFragment(MainFragment(), addToBackStack = false, animated = false)
 
         checkPermissions()
     }
@@ -61,14 +61,10 @@ class MainActivity : DaggerAppCompatActivity(), MainActivityView {
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        when (requestCode) {
-            PERMISSIONS_REQUEST_CODE -> {
-                if ((grantResults.isNotEmpty())) {
-                    grantResults.forEach { result ->
-                        if (result != PackageManager.PERMISSION_GRANTED) {
-                            finish()
-                        }
-                    }
+        if (requestCode == PERMISSIONS_REQUEST_CODE) {
+            grantResults.forEach { result ->
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    finish()
                 }
             }
         }
@@ -116,7 +112,6 @@ class MainActivity : DaggerAppCompatActivity(), MainActivityView {
 
     // View
 
-
     override fun setActionBar(title: String?) {
         setSupportActionBar(toolbar as Toolbar)
         if (title == null) {
@@ -132,5 +127,4 @@ class MainActivity : DaggerAppCompatActivity(), MainActivityView {
     override fun exportMeshData(shareIntent: Intent) {
         startActivity(Intent.createChooser(shareIntent, "Export Mesh Network Keys"))
     }
-
 }

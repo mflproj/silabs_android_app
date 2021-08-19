@@ -78,6 +78,7 @@ class NetworkListPresenter(private val networkListView: NetworkListView, private
 
     fun deleteNetworkLocally(subnet: Subnet) {
         subnet.removeOnlyFromLocalStructure()
+        meshNodeManager.removeMeshNodesOfSubnet(subnet)
         refreshList()
     }
 
@@ -118,7 +119,7 @@ class NetworkListPresenter(private val networkListView: NetworkListView, private
                     override fun success() {
                         Log.d(TAG, "removeSubnet success")
                         networkConnectionLogic.disconnect()
-                        removeNodesFunc(subnet)
+                        meshNodeManager.removeMeshNodesOfSubnet(subnet)
                         networkListView.dismissLoadingDialog()
                         refreshList()
                     }
@@ -154,12 +155,6 @@ class NetworkListPresenter(private val networkListView: NetworkListView, private
             }
         })
         networkConnectionLogic.connect(subnet)
-    }
-
-    fun removeNodesFunc(subnet: Subnet) {
-        meshNodeManager.getMeshNodes(subnet).forEach {
-            meshNodeManager.removeNodeFunc(it)
-        }
     }
 
     fun networkClicked(subnet: Subnet) {

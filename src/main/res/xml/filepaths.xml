@@ -15,4 +15,7 @@
     <files-path
         name="logs"
         path="logs/" />
+    <external-path
+        name="external_files"
+        path="." />
 </paths>

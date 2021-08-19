@@ -15,37 +15,38 @@ import android.util.Log
 import com.siliconlab.bluetoothmesh.adk.connectable_device.*
 import com.siliconlabs.bluetoothmesh.App.Logic.BluetoothScanner
 import java.lang.Thread.sleep
-import java.lang.reflect.Method
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class BluetoothConnectableDevice(
-        private val context: Context,
-        private var scanResult: ScanResult,
+open class BluetoothConnectableDevice(
+        val context: Context,
+        var scanResult: ScanResult,
         val bluetoothScanner: BluetoothScanner
 ) : ConnectableDevice() {
-
     private val TAG = BluetoothConnectableDevice::class.java.simpleName + "@" + hashCode()
-
     var deviceConnectionCallbacks = mutableSetOf<DeviceConnectionCallback>()
     var mainHandler = Handler(Looper.getMainLooper())
     var bluetoothGatt: BluetoothGatt? = null
     lateinit var bluetoothDevice: BluetoothDevice
-    private var mtuSize = 0
     lateinit var address: String
         private set
-    private var advertisementData: ByteArray? = null
-    var connecting = false
     private lateinit var bluetoothGattCallback: BluetoothGattCallback
     lateinit var scanCallback: ScanCallback
     private var refreshBluetoothDeviceCallback: RefreshBluetoothDeviceCallback? = null
     private lateinit var refreshBluetoothDeviceTimeoutRunnable: Runnable
-    private var refreshGattServicesCallback: RefreshGattServicesCallback? = null
 
-    fun initRefreshBluetoothDeviceTimeoutRunnable() {
-        refreshBluetoothDeviceTimeoutRunnable = Runnable {
-            refreshingBluetoothDeviceTimeout()
-        }
+    init {
+        processScanResult(scanResult)
+        initScanCallback()
+        initBluetoothGattCallback()
+        initRefreshBluetoothDeviceTimeoutRunnable()
+    }
+
+    private fun processScanResult(scanResult: ScanResult) {
+        this.bluetoothDevice = scanResult.device
+        this.advertisementData = scanResult.scanRecord!!.bytes
+        this.address = bluetoothDevice.address
+        this.scanResult = scanResult
     }
 
     fun initScanCallback() {
@@ -64,7 +65,6 @@ class BluetoothConnectableDevice(
                 stopScan()
                 mainHandler.removeCallbacks(refreshBluetoothDeviceTimeoutRunnable)
                 processScanResult(result)
-
                 // workaround to 133 gatt issue
                 // https://github.com/googlesamples/android-BluetoothLeGatt/issues/44
                 mainHandler.postDelayed({ refreshBluetoothDeviceCallback?.success() }, 500)
@@ -72,116 +72,42 @@ class BluetoothConnectableDevice(
         }
     }
 
-    fun discoverServices(bluetoothGatt: BluetoothGatt) {
-        Log.d(TAG, "discoverServices")
-        for (i in 0..2) {
-            if (bluetoothGatt.discoverServices()) {
-                return
-            }
-            sleep(50)
-            Log.d(TAG, "retry discover services i: $i")
-        }
-        disconnect()
-    }
-
     fun initBluetoothGattCallback() {
         bluetoothGattCallback = object : BluetoothGattCallback() {
-            private var connectionAttempts = 0
-            private var changeMtuAttempts = 0
-            private var discoverServicesAttempts = 0
-
-            private fun changeMtu(bluetoothGatt: BluetoothGatt) {
-                Log.d(TAG, "changeMtu")
-                for (i in 0..2) {
-                    if (bluetoothGatt.requestMtu(512)) {
-                        return
-                    }
-                    sleep(50)
-                    Log.d(TAG, "retry request mtu i: $i")
-                }
-                discoverServices(bluetoothGatt)
-            }
-
             override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
                 super.onConnectionStateChange(gatt, status, newState)
                 mainHandler.post {
                     Log.d(TAG, "onConnectionStateChange : status: $status, newState: $newState")
-
-                    when (status) {
-                        BluetoothGatt.GATT_SUCCESS -> onConnectionStateChangeSuccess(gatt, newState)
-                        else -> onConnectionStateChangeFail(gatt)
+                    if (status == BluetoothGatt.GATT_SUCCESS) {
+                        when (newState) {
+                            BluetoothProfile.STATE_CONNECTED -> {
+                                connectionRequest?.handleSuccess()
+                            }
+                            BluetoothProfile.STATE_DISCONNECTED, BluetoothProfile.STATE_DISCONNECTING -> {
+                                handleDisconnected()
+                            }
+                        }
+                    } else {
+                        gatt.close()
+                        if (connecting) {
+                            connectionRequest?.handleAttemptFailure()
+                        } else {
+                            handleBrokenConnection()
+                        }
                     }
                 }
-            }
-
-            private fun onConnectionStateChangeSuccess(gatt: BluetoothGatt, newState: Int) {
-                connectionAttempts = 0
-
-                if (newState == BluetoothProfile.STATE_CONNECTED) {
-                    changeMtu(gatt)
-                } else if (newState == BluetoothProfile.STATE_DISCONNECTED || newState == BluetoothProfile.STATE_DISCONNECTING) {
-                    closeGatt()
-                }
-            }
-
-            private fun onConnectionStateChangeFail(gatt: BluetoothGatt) {
-                connecting = false
-                gatt.close()
-
-                if (!isConnected) {
-                    onConnectionAttemptFail()
-                } else {
-                    onConnectionFail()
-                }
-            }
-
-            private fun onConnectionAttemptFail() {
-                Log.d(TAG, "connect connectionAttempts=$connectionAttempts")
-                connectionAttempts++
-                nextAttempt()
-            }
-
-            private fun nextAttempt() {
-                Log.d(TAG, "nextAttempt: connectionAttempts: $connectionAttempts")
-                if (connectionAttempts <= 3) {
-                    //workaround to 133 gatt issue
-                    connect()
-                } else {
-                    onConnectionError()
-                    connectionAttempts = 0
-                }
-            }
-
-            private fun onConnectionFail() {
-                connectionAttempts = 0
-
-                onConnectionError()
-                notifyConnectionState(false)
             }
 
             override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
                 super.onMtuChanged(gatt, mtu, status)
                 mainHandler.post {
                     Log.d(TAG, "onMtuChanged : status $status, mtu: $mtu")
+                    this@BluetoothConnectableDevice.mtu = mtu
                     if (status == BluetoothGatt.GATT_SUCCESS) {
-                        onMtuChangedSuccess(gatt, mtu)
+                        mtuRequest?.handleSuccess()
                     } else {
-                        onMtuChangedFail(gatt)
+                        mtuRequest?.handleAttemptFailure()
                     }
-                }
-            }
-
-            private fun onMtuChangedSuccess(gatt: BluetoothGatt, mtu: Int) {
-                changeMtuAttempts = 0
-                mtuSize = mtu
-                discoverServices(gatt)
-            }
-
-            private fun onMtuChangedFail(gatt: BluetoothGatt) {
-                if (++changeMtuAttempts < 3) {
-                    changeMtu(gatt)
-                } else {
-                    discoverServices(gatt)
                 }
             }
 
@@ -190,28 +116,10 @@ class BluetoothConnectableDevice(
                 mainHandler.post {
                     Log.d(TAG, "onServicesDiscovered: status: $status")
                     if (status == BluetoothGatt.GATT_SUCCESS) {
-                        onServicesDiscoveredSuccess()
+                        discoverServicesRequest?.handleSuccess()
                     } else {
-                        onServicesDiscoveredFail(gatt)
+                        discoverServicesRequest?.handleAttemptFailure()
                     }
-                }
-            }
-
-            private fun onServicesDiscoveredSuccess() {
-                discoverServicesAttempts = 0
-                if (connecting) {
-                    //notify that device is connected only if it is connecting attempt
-                    notifyDeviceConnected()
-                }
-                refreshGattServicesCallback?.onSuccess()
-                refreshGattServicesCallback = null
-            }
-
-            private fun onServicesDiscoveredFail(gatt: BluetoothGatt) {
-                if (++discoverServicesAttempts < 3) {
-                    discoverServices(gatt)
-                } else {
-                    disconnect()
                 }
             }
 
@@ -222,18 +130,150 @@ class BluetoothConnectableDevice(
         }
     }
 
-    init {
-        processScanResult(scanResult)
-        initScanCallback()
-        initBluetoothGattCallback()
-        initRefreshBluetoothDeviceTimeoutRunnable()
+    private fun handleBrokenConnection() {
+        onConnectionError()
+        notifyConnectionState(false)
     }
 
-    private fun processScanResult(scanResult: ScanResult) {
-        this.bluetoothDevice = scanResult.device
-        this.advertisementData = scanResult.scanRecord!!.bytes
-        this.address = bluetoothDevice.address
-        this.scanResult = scanResult
+    private fun handleDisconnected() {
+        bluetoothGatt?.close()
+        /* When connection is being closed by Android, it needs 1s to check if other apps are using this gatt connection with this peripheral.
+        Otherwise, when trying to re-connect without delay, connection will close on behalf of a peripheral after a while calling
+        #onConnectionStateChange with status 22 */
+
+        notifyDisconnectionWithDelay()
+    }
+
+    private fun notifyDisconnectionWithDelay() {
+        mainHandler.postDelayed({
+            notifyDeviceDisconnected()
+            Log.d(TAG, "Gatt connection closed")
+        }, 1500)
+    }
+
+    fun initRefreshBluetoothDeviceTimeoutRunnable() {
+        refreshBluetoothDeviceTimeoutRunnable = Runnable {
+            refreshingBluetoothDeviceTimeout()
+        }
+    }
+
+    interface RequestCallback {
+        fun success()
+        fun failure()
+    }
+
+    fun discoverServices(callback: RequestCallback) {
+        Log.d(TAG, "discoverServices")
+        DiscoverServicesRequest(callback).process()
+    }
+
+    private var discoverServicesRequest: DiscoverServicesRequest? = null
+
+    private abstract class Request(private val callback: RequestCallback) {
+        private var attempt = 0
+
+        abstract fun process()
+        abstract fun finish()
+
+        fun handleSuccess() {
+            finish()
+            callback.success()
+        }
+
+        fun handleAttemptFailure() {
+            if (++attempt < 3) {
+                process()
+            } else {
+                handleFailure()
+            }
+        }
+
+        fun handleFailure() {
+            finish()
+            callback.failure()
+        }
+    }
+
+    private inner class DiscoverServicesRequest(callback: RequestCallback) : Request(callback) {
+        init {
+            discoverServicesRequest = this
+        }
+
+        override fun process() {
+            repeat(3) {
+                if (bluetoothGatt!!.discoverServices()) {
+                    return
+                }
+                sleep(50)
+                Log.d(TAG, "retry discover services i: $it")
+            }
+            handleFailure()
+        }
+
+        override fun finish() {
+            discoverServicesRequest = null
+        }
+    }
+
+    private var mtu = 0
+    override fun getMTU() = mtu
+
+    fun changeMtu(callback: RequestCallback) {
+        Log.d(TAG, "changeMtu")
+        MtuRequest(callback).process()
+    }
+
+    private var mtuRequest: MtuRequest? = null
+
+    private inner class MtuRequest(callback: RequestCallback) : Request(callback) {
+        init {
+            mtuRequest = this
+        }
+
+        override fun process() {
+            repeat(3) {
+                if (bluetoothGatt!!.requestMtu(512)) {
+                    return
+                }
+                sleep(50)
+                Log.d(TAG, "retry request mtu i: $it")
+            }
+            handleFailure()
+        }
+
+        override fun finish() {
+            mtuRequest = null
+        }
+    }
+
+    private var connectionRequest: ConnectionRequest? = null
+    val connecting get() = connectionRequest != null
+
+    private inner class ConnectionRequest(callback: RequestCallback) : Request(callback) {
+        init {
+            connectionRequest = this
+        }
+
+        override fun process() {
+            checkMainThread()
+            bluetoothGatt = bluetoothDevice.connectGatt(context, false, bluetoothGattCallback, BluetoothDevice.TRANSPORT_LE).also {
+                it.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+                setupTimeout(it)
+            }
+        }
+
+        private fun setupTimeout(bluetoothGattLast: BluetoothGatt) {
+            mainHandler.postDelayed({
+                if (bluetoothGatt == bluetoothGattLast && connecting) {
+                    Log.d(TAG, "connection timeout mac: $address")
+                    onConnectionError()
+                }
+            }, TimeUnit.SECONDS.toMillis(30))
+        }
+
+        override fun finish() {
+            connectionRequest = null
+        }
     }
 
     fun addDeviceConnectionCallback(deviceConnectionCallback: DeviceConnectionCallback) {
@@ -295,8 +335,37 @@ class BluetoothConnectableDevice(
 
     override fun connect() {
         Log.d(TAG, "connect mac: $address")
-        connectGatt()
-        setupConnectionTimeout(bluetoothGatt!!)
+        ConnectionRequest(object : RequestCallback {
+            override fun success() {
+                configureConnectionAndNotifyResult()
+            }
+
+            override fun failure() {
+                onConnectionError()
+            }
+        }).process()
+    }
+
+    private fun configureConnectionAndNotifyResult() {
+        changeMtu(object : RequestCallback {
+            private val servicesDiscoveredCallback = object : RequestCallback {
+                override fun success() {
+                    notifyDeviceConnected()
+                }
+
+                override fun failure() {
+                    disconnect()
+                }
+            }
+
+            override fun success() {
+                discoverServices(servicesDiscoveredCallback)
+            }
+
+            override fun failure() {
+                discoverServices(servicesDiscoveredCallback)
+            }
+        })
     }
 
     private fun startScan(): Boolean {
@@ -309,51 +378,20 @@ class BluetoothConnectableDevice(
         bluetoothScanner.stopLeScan()
     }
 
-    private fun connectGatt() {
-        checkMainThread()
-        bluetoothGatt = bluetoothDevice.connectGatt(context, false, bluetoothGattCallback, BluetoothDevice.TRANSPORT_LE)
-        bluetoothGatt!!.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
-    }
-
-    private fun setupConnectionTimeout(bluetoothGattLast: BluetoothGatt) {
-        connecting = true
-        mainHandler.postDelayed({
-            if (bluetoothGatt == bluetoothGattLast && connecting) {
-                Log.d(TAG, "connection timeout mac: $address")
-                onConnectionError()
-            }
-        }, TimeUnit.SECONDS.toMillis(30))
-    }
-
     override fun disconnect() {
         Log.d(TAG, "disconnect mac: $address")
         checkMainThread()
 
-        refreshGattServicesCallback?.onFail()
-        refreshGattServicesCallback = null
-
-        connecting = false
+        connectionRequest?.finish()
         mainHandler.removeCallbacks(refreshBluetoothDeviceTimeoutRunnable)
         refreshDeviceCache()
         bluetoothGatt?.disconnect()
         stopScan()
     }
 
-    private fun closeGatt() {
-        bluetoothGatt?.close()
-        /* When connection is being closed by Android, it needs 1s to check if other apps are using this gatt connection with this peripheral.
-        Otherwise, when trying to re-connect without delay, connection will close on behalf of a peripheral after a while calling
-        #onConnectionStateChange with status 22 */
-
-        mainHandler.postDelayed({
-            notifyDeviceDisconnected()
-            Log.d(TAG, "Gatt connection closed")
-        }, 1000)
-    }
-
     private fun notifyDeviceConnected() {
-        Log.d(TAG, "notifyDeviceConnected: ")
-        connecting = false
+        Log.d(TAG, "notifyDeviceConnected")
+        connectionRequest?.finish()
         onConnected()
         notifyConnectionState(true)
     }
@@ -366,29 +404,33 @@ class BluetoothConnectableDevice(
     fun refreshDeviceCache(): Boolean {
         var result = false
         try {
-            val refreshMethod: Method = bluetoothGatt!!.javaClass.getMethod("refresh")
-            result = refreshMethod.invoke(bluetoothGatt, *arrayOfNulls(0)) as? Boolean ?: false
+            val refreshMethod = bluetoothGatt?.javaClass?.getMethod("refresh")
+            result = refreshMethod?.invoke(bluetoothGatt, *arrayOfNulls(0)) as? Boolean ?: false
             Log.d(TAG, "refreshDeviceCache $result")
         } catch (localException: Exception) {
-            Log.e(TAG, "An exception occured while refreshing device")
+            Log.e(TAG, "An exception occurred while refreshing device")
         }
         return result
     }
 
+    private var advertisementData: ByteArray? = null
     override fun getAdvertisementData() = advertisementData
 
     override fun refreshGattServices(refreshGattServicesCallback: RefreshGattServicesCallback) {
         if (refreshDeviceCache()) {
-            this.refreshGattServicesCallback = refreshGattServicesCallback
-            discoverServices(bluetoothGatt!!)
+            discoverServices(object : RequestCallback {
+                override fun success() {
+                    refreshGattServicesCallback.onSuccess()
+                }
+
+                override fun failure() {
+                    refreshGattServicesCallback.onFail()
+                    disconnect()
+                }
+            })
         } else {
             refreshGattServicesCallback.onFail()
         }
-    }
-
-    override fun getMTU(): Int {
-        Log.d(TAG, "getMTU $mtuSize")
-        return mtuSize
     }
 
     override fun getServiceData(service: UUID?): ByteArray? {
@@ -413,7 +455,7 @@ class BluetoothConnectableDevice(
             tryToWriteData(service, characteristic, data)
             connectableDeviceWriteCallback.onWrite(service, characteristic)
         } catch (e: Exception) {
-            Log.e(TAG, "writeData error: ${e.message}")
+            Log.w(TAG, "writeData error: ${e.message}")
             connectableDeviceWriteCallback.onFailed(service, characteristic)
         }
     }
@@ -444,7 +486,7 @@ class BluetoothConnectableDevice(
         checkMainThread()
 
         try {
-            Log.d(TAG, "available services=" + bluetoothGatt!!.services?.map { it.uuid })
+            Log.d(TAG, "available services=" + bluetoothGatt?.services?.map { it.uuid })
             tryToSubscribe(service, characteristic)
             connectableDeviceSubscriptionCallback.onSuccess(service, characteristic)
         } catch (e: Exception) {
@@ -458,7 +500,7 @@ class BluetoothConnectableDevice(
         checkMainThread()
 
         try {
-            Log.d(TAG, "available services=" + bluetoothGatt!!.services?.map { it.uuid })
+            Log.d(TAG, "available services=" + bluetoothGatt?.services?.map { it.uuid })
             tryToUnsubscribe(service, characteristic)
             capableDeviceUnsubscriptionCallback.onSuccess(service, characteristic)
         } catch (e: Exception) {
@@ -531,7 +573,6 @@ class BluetoothConnectableDevice(
 
     interface DeviceConnectionCallback {
         fun onConnectedToDevice()
-
         fun onDisconnectedFromDevice()
     }
 }

@@ -11,7 +11,6 @@ import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import com.siliconlab.bluetoothmesh.adk.BluetoothMesh
 import com.siliconlab.bluetoothmesh.adk.configuration.BluetoothMeshConfiguration
-import com.siliconlab.bluetoothmesh.adk.configuration.LocalVendorModel
 import com.siliconlab.bluetoothmesh.adk.data_model.group.Group
 import com.siliconlab.bluetoothmesh.adk.data_model.network.Network
 import com.siliconlab.bluetoothmesh.adk.data_model.subnet.Subnet
@@ -25,11 +24,11 @@ class MeshLogic(val context: Context) {
     val bluetoothMesh: BluetoothMesh
 
     companion object {
-        val supportedLocalVendorModels = mutableListOf<LocalVendorModel>()
+        val configuration = BluetoothMeshConfiguration()
     }
 
     init {
-        BluetoothMesh.initialize(context, BluetoothMeshConfiguration(supportedLocalVendorModels))
+        BluetoothMesh.initialize(context, configuration)
         bluetoothMesh = BluetoothMesh.getInstance()
     }
 

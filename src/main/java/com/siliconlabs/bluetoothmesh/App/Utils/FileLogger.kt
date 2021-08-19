@@ -5,7 +5,6 @@
 package com.siliconlabs.bluetoothmesh.App.Utils
 
 import android.content.Context
-import android.content.pm.ApplicationInfo
 import java.io.File
 import java.io.IOException
 import java.util.*
@@ -18,19 +17,16 @@ object FileLogger {
     var directory: File? = null
         private set
 
-    fun setup(context: Context, appInfo: ApplicationInfo) {
+    fun setup(context: Context) {
         directory = File(context.filesDir, "logs")
         directory!!.run {
             if (exists()) {
                 cleanup()
+            } else {
+                mkdirs()
             }
-            if (appInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
-                if (!exists()) {
-                    mkdirs()
-                }
 
-                startLogging()
-            }
+            startLogging()
         }
     }
 

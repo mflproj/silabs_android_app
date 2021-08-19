@@ -20,7 +20,6 @@ class LogsAdapter(context: Context, private val logs: List<File>) : BaseAdapter(
         return view.apply {
             val file = getItem(position)
             val modifiedDate = Date(file.lastModified())
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
 
             tv_name.text = file.nameWithoutExtension
             tv_size.text = Formatter.formatFileSize(context, file.length())
@@ -33,4 +32,8 @@ class LogsAdapter(context: Context, private val logs: List<File>) : BaseAdapter(
     override fun getItemId(position: Int) = position.toLong()
 
     override fun getCount() = logs.size
+
+    companion object {
+        private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+    }
 }

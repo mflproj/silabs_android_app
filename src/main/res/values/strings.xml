@@ -201,6 +201,8 @@
     <string name="error_message_api_error">Bluetooth mesh error</string>
     <string name="error_message_could_not_connect_to_device">Connecting to the device failed</string>
     <string name="error_message_could_not_subscribe_to_characteristic">Subscribing to the device characteristic failed</string>
+    <string name="error_message_could_write_to_characteristic">Writing to the device characteristic failed</string>
+    <string name="error_message_could_not_disconnect_from_device">Disconnecting from the device failed</string>
     <string name="error_message_could_not_read_service_data">Reading service data failed</string>
     <string name="error_message_disconnected_from_device">Disconnected from the device</string>
     <string name="error_message_provisioning_already_pending">A provisioning session is already pending</string>
@@ -305,6 +307,7 @@
     <string name="device_adapter_lc_property_value_unknown">---</string>
     <string name="device_adapter_lc_input_out_of_range">Value not fit to %s … %s</string>
     <string name="device_adapter_lc_input_blank">Value can not be blank</string>
+    <string name="device_adapter_lc_input_format_wrong">Wrong input format</string>
     <string name="device_adapter_lc_new_lc_mode">New LC Mode: %s</string>
     <string name="device_adapter_lc_new_lc_occupancy_mode">New LC Occupancy Mode: %s</string>
     <string name="device_adapter_lc_new_lc_on_off_mode">New LC OnOff Mode: %s</string>
@@ -325,6 +328,17 @@
     <string name="logs_menu_action_save">Save</string>
     <string name="logs_empty_list">No logs found</string>
     <string name="logs_save_error">Something went wrong</string>
+
+    <string name="txt_btn_run_test">Run Test</string>
+    <string name="txt_btn_reset_test">Reset Test</string>
+    <string name="txt_btn_stop_test">Stop Test</string>
+    <string name="txt_btn_share_logs">Share Logs</string>
+    <string name="txt_btn_documentation">Documentation</string>
+    <string name="test_start_warning_title">Warning</string>
+    <string name="test_documentation_uri" translatable="false">https://www.silabs.com/documents/public/application-notes/an1352-running-ble-iop-test-in-mesh.pdf</string>
+    <string name="test_start_warning_message">Please consult the IOP documentation before starting the tests.
+        \nPlease do not leave the test view when the tests are running.
+        \nThe database needs to be cleared for testing purposes. Are you sure you want to continue?</string>
 
     <string-array name="device_adapter_lc_properties">
         <item>Ambient LuxLevel On</item>
@@ -398,4 +412,56 @@
         <item>Saturday</item>
         <item>Sunday</item>
     </string-array>
+
+    <string name="test_title_beaconing">Beaconing</string>
+    <string name="test_desc_beaconing_mode_low_latency">IOP Test PB-GATT Beaconing - Scan Mode Low Latency</string>
+    <string name="test_desc_beaconing_mode_balanced">IOP Test PB-ADV, PB-GATT Beaconing - Scan Mode Balanced</string>
+    <string name="test_desc_beaconing_mode_low_power">IOP Test PB-ADV, PB-GATT Beaconing - Scan Mode Low Power</string>
+
+    <string name="test_title_provisioning">Provisioning</string>
+    <string name="test_desc_provisioning_no_oob">IOP Test authentication with no OOB</string>
+    <string name="test_desc_provisioning_static_oob">IOP Test authentication with static OOB</string>
+    <string name="test_desc_provisioning_output_oob">IOP Test authentication with output OOB</string>
+    <string name="test_desc_provisioning_input_oob">IOP Test authentication with input OOB</string>
+
+    <string name="test_title_unicast_control">Unicast Control</string>
+    <string name="test_desc_unicast_control_proxy_ack">IOP Test Unicast Control on Proxy Node with ACK</string>
+    <string name="test_desc_unicast_control_proxy_no_ack">IOP Test Unicast Control on Proxy Node without ACK</string>
+    <string name="test_desc_unicast_control_relay_ack">IOP Test Unicast Control on Relay Node with ACK</string>
+    <string name="test_desc_unicast_control_relay_no_ack">IOP Test Unicast Control on Relay Node without ACK</string>
+
+    <string name="test_desc_unicast_control_friend_ack">IOP Test Unicast Control on Friend Node with ACK</string>
+    <string name="test_desc_unicast_control_friend_no_ack">IOP Test Unicast Control on Friend Node without ACK</string>
+
+    <string name="test_desc_unicast_control_lpn_ack">IOP Test Unicast Control on LPN Node with ACK</string>
+    <string name="test_desc_unicast_control_lpn_no_ack">IOP Test Unicast Control on LPN Node without ACK</string>
+
+    <string name="test_title_multicast_control">Multicast Control</string>
+    <string name="test_desc_multicast_control">IOP Test Multicast Set Unack 4 nodes</string>
+
+    <string name="test_title_remove_node">Remove nodes</string>
+    <string name="test_title_add_node">Add nodes</string>
+    <string name="test_desc_remove_node">IOP Test Remove 2 node from network</string>
+    <string name="test_desc_add_node">IOP Test add a node to network</string>
+
+    <string name="test_title_connection">Connection</string>
+    <string name="test_desc_connection">IOP Test Connection</string>
+
+    <string name="test_title_post_testing">Post Testing</string>
+    <string name="test_desc_remove_all_node">Remove all nodes from subnet</string>
+
+    <string name="message_error_cannot_scanner_device">Can not scanner device</string>
+    <string name="message_error_expired_time">Testing time: %1$d, Expired time;Acceptable time: %2$d</string>
+    <string name="message_error_expired_time_scanner_add_node">Testing time: %1$d, Expired time by scanner ;Acceptable time: %2$d</string>
+    <string name="message_error_provisioning">Provisioning device: %1$s error: %2$s</string>
+    <string name="message_error_no_device">No device</string>
+    <string name="message_error_configuration_node_fail">Configuration node fail</string>
+    <string name="message_error_not_connect_node">Cannot connect node</string>
+    <string name="message_error_cannot_connect_proxy">Can not connect proxy</string>
+    <string name="message_error_node_does_not_exist">Node does not exist</string>
+    <string name="test_title_iop_test">IOP Test</string>
+
+    <string name="test_status_fail">Fail</string>
+    <string name="test_status_pass">Pass</string>
+    <string name="test_status_waiting">Waiting</string>
 </resources>

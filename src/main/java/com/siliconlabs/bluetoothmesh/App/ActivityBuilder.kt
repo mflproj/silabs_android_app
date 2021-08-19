@@ -18,6 +18,8 @@ import com.siliconlabs.bluetoothmesh.App.Fragments.Device.Info.DeviceInfoFragmen
 import com.siliconlabs.bluetoothmesh.App.Fragments.Device.Info.DeviceInfoModule
 import com.siliconlabs.bluetoothmesh.App.Fragments.DeviceList.DeviceListFragment
 import com.siliconlabs.bluetoothmesh.App.Fragments.DeviceList.DeviceListModule
+import com.siliconlabs.bluetoothmesh.App.Fragments.Experiment.ExperimentListFragment
+import com.siliconlabs.bluetoothmesh.App.Fragments.Experiment.ExperimentListModule
 import com.siliconlabs.bluetoothmesh.App.Fragments.GroupList.GroupListFragment
 import com.siliconlabs.bluetoothmesh.App.Fragments.GroupList.GroupListModule
 import com.siliconlabs.bluetoothmesh.App.Fragments.MainFragment.MainFragment
@@ -69,4 +71,7 @@ abstract class ActivityBuilder {
 
     @ContributesAndroidInjector(modules = [(ControlGroupModule::class)])
     abstract fun bindControlGroupFragment(): ControlGroupFragment
+
+    @ContributesAndroidInjector(modules = [(ExperimentListModule::class)])
+    abstract fun bindExperimentListFragment(): ExperimentListFragment
 }

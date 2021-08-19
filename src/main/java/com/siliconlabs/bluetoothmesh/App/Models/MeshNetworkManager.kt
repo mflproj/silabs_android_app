@@ -24,7 +24,8 @@ class MeshNetworkManager(val meshLogic: MeshLogic) {
     val bluetoothMesh = meshLogic.bluetoothMesh
 
     var network: Network? = null
-    var subnet: Subnet? = null
+        private set
+    private var subnet: Subnet? = null
 
     init {
         createDefaultStructure()
@@ -61,7 +62,7 @@ class MeshNetworkManager(val meshLogic: MeshLogic) {
                 Log.e(TAG, e.toString())
             }
         } else {
-            subnet = subnets.iterator().next()
+            subnet = subnets.first()
         }
     }
 

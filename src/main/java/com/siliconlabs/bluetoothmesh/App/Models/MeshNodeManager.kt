@@ -58,4 +58,16 @@ class MeshNodeManager(private val deviceFunctionalityDb: DeviceFunctionalityDb) 
         meshNode.functionality = DeviceFunctionality.FUNCTIONALITY.Unknown
         deviceFunctionalityDb.removeFunctionality(meshNode.node)
     }
+
+    fun removeMeshNode(node: Node) {
+        meshNodes.remove(node)?.also {
+            removeNodeFunc(it)
+        }
+    }
+
+    fun removeMeshNodesOfSubnet(subnet: Subnet) {
+        meshNodes.keys
+                .filter { it.subnets == setOf(subnet) }
+                .forEach { removeMeshNode(it) }
+    }
 }

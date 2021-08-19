@@ -32,7 +32,7 @@ class BluetoothScanner(bluetoothStateReceiver: BluetoothStateReceiver) : ScanCal
         scanCallbacks.remove(scanCallback)
     }
 
-    fun startLeScan(meshServ: ParcelUuid? = null): Boolean {
+    fun startLeScan(meshServ: ParcelUuid? = null, mode: Int = ScanSettings.SCAN_MODE_LOW_LATENCY): Boolean {
         synchronized(leScanStarted) {
             Log.d(TAG, "startLeScan")
             if (leScanStarted) {
@@ -45,7 +45,7 @@ class BluetoothScanner(bluetoothStateReceiver: BluetoothStateReceiver) : ScanCal
             initBluetoothLeScanner()
 
             val settings = ScanSettings.Builder()
-                    .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                    .setScanMode(mode)
                     .build()
             val filters = ArrayList<ScanFilter>()
             meshServ?.let {
@@ -54,6 +54,7 @@ class BluetoothScanner(bluetoothStateReceiver: BluetoothStateReceiver) : ScanCal
                         .build()
                 filters.add(filter)
             }
+
             bluetoothLeScanner?.apply {
                 startScan(filters, settings, this@BluetoothScanner)
                 leScanStarted = true

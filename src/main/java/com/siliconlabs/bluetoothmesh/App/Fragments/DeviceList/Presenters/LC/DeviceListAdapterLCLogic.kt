@@ -21,6 +21,7 @@ import com.siliconlabs.bluetoothmesh.App.ModelView.MeshNode
 import com.siliconlabs.bluetoothmesh.App.Models.MeshElementControl
 import com.siliconlabs.bluetoothmesh.App.Models.TransactionId
 import com.siliconlabs.bluetoothmesh.R
+import kotlin.NumberFormatException
 
 class DeviceListAdapterLCLogic(val listener: DeviceListAdapterLogic.DeviceListAdapterLogicListener) {
     private val acknowledged = true
@@ -177,6 +178,9 @@ class DeviceListAdapterLCLogic(val listener: DeviceListAdapterLogic.DeviceListAd
             val maxValueLen = maxValue.length
             val max = maxValue.substring(0, maxValueLen + maxValueDecimalExponent!!) + "." + maxValue.substring(maxValueLen + maxValueDecimalExponent, maxValueLen);
             listener.showToast(R.string.device_adapter_lc_input_out_of_range, property.characteristic.min.toString(), max)
+            return
+        } catch (e: NumberFormatException) {
+            listener.showToast(R.string.device_adapter_lc_input_format_wrong)
             return
         }
 

@@ -21,7 +21,7 @@ class MeshApplication : Application(), HasActivityInjector {
     override fun onCreate() {
         super.onCreate()
 
-        FileLogger.setup(applicationContext, applicationInfo)
+        FileLogger.setup(applicationContext)
         DaggerAppComponent.builder().application(this).build().inject(this)
     }
 

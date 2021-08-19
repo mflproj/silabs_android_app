@@ -13,7 +13,8 @@ import com.siliconlabs.bluetoothmesh.App.Logic.MeshLogic
 import com.siliconlabs.bluetoothmesh.App.ModelView.MeshNode
 import com.siliconlabs.bluetoothmesh.App.Models.MeshNodeManager
 
-class DeviceEditionDialogsPresenter(val dialog: DeviceEditionDialogs, val parentView: ParentView, val meshLogic: MeshLogic, val deviceFunctionalityDb: MeshNodeManager) : DeviceEditionDialogs.DeviceEditionDialogsListener {
+class DeviceEditionDialogsPresenter(val dialog: DeviceEditionDialogs, val parentView: ParentView, val meshLogic: MeshLogic,
+                                    val deviceFunctionalityDb: MeshNodeManager) : DeviceEditionDialogs.DeviceEditionDialogsListener {
     private val TAG: String = javaClass.canonicalName!!
 
     interface ParentView {
@@ -41,10 +42,7 @@ class DeviceEditionDialogsPresenter(val dialog: DeviceEditionDialogs, val parent
     private fun factoryResetDevice(configurationControl: ConfigurationControl) {
         configurationControl.factoryReset(object : FactoryResetCallback {
             override fun success(node: Node?) {
-                node?.let {
-                    val meshNode = deviceFunctionalityDb.getMeshNode(it)
-                    deviceFunctionalityDb.removeNodeFunc(meshNode)
-                }
+                node?.let { deviceFunctionalityDb.removeMeshNode(it) }
                 dialog.dismissLoadingDialog()
                 parentView.refreshList()
             }
@@ -59,7 +57,7 @@ class DeviceEditionDialogsPresenter(val dialog: DeviceEditionDialogs, val parent
 
     override fun deleteDeviceLocally(node: Node) {
         node.removeOnlyFromLocalStructure()
+        deviceFunctionalityDb.removeMeshNode(node)
         parentView.refreshList()
     }
-
 }

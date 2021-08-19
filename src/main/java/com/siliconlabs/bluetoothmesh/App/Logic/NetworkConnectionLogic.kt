@@ -24,62 +24,53 @@ import com.siliconlab.bluetoothmesh.adk.data_model.subnet.Subnet
 import com.siliconlabs.bluetoothmesh.App.Models.BluetoothConnectableDevice
 import java.util.*
 
-class NetworkConnectionLogic(private val context: Context, private val connectableDeviceHelper: ConnectableDeviceHelper, val bluetoothLeScanLogic: BluetoothScanner) : BluetoothConnectableDevice.DeviceConnectionCallback {
+class NetworkConnectionLogic(private val context: Context,
+                             private val connectableDeviceHelper: ConnectableDeviceHelper,
+                             val bluetoothScanner: BluetoothScanner) : BluetoothConnectableDevice.DeviceConnectionCallback {
     private val TAG: String = javaClass.canonicalName!!
 
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
 
-    enum class CONNECTION_STATE {
+    enum class ConnectionState {
         DISCONNECTED,
         CONNECTING,
         CONNECTED
     }
 
-    private var currentState = CONNECTION_STATE.DISCONNECTED
+    private var currentState = ConnectionState.DISCONNECTED
 
-    private val listeners: ArrayList<NetworkConnectionListener> = ArrayList()
+    private val listeners = mutableSetOf<NetworkConnectionListener>()
 
-    private var networkInfo: Subnet? = null
+    private var subnet: Subnet? = null
 
-    var proxyConnection: ProxyConnection? = null
+    private var proxyConnection: ProxyConnection? = null
 
     private var bluetoothConnectableDevice: BluetoothConnectableDevice? = null
 
-    private var connectionTimeoutRunnable: Runnable = Runnable {
-        connetionTimeout()
-    }
+    private var connectionTimeoutRunnable = Runnable { connectionTimeout() }
 
-    fun connect(network: Subnet) {
-        synchronized(this) {
-            if (networkInfo != null) {
-                // new network
-                if (networkInfo != network) {
-                    disconnect()
-                } else {
-                    // already connected/connecting
-                    if (currentState != CONNECTION_STATE.DISCONNECTED) {
-                        return
-                    }
-                }
-            }
-
-            Log.d(TAG, "Connecting to subnet")
-            setCurrentState(CONNECTION_STATE.CONNECTING)
-
-            networkInfo = network
-            bluetoothLeScanLogic.addScanCallback(scanCallback)
-            startScan()
+    @Synchronized
+    fun connect(subnet: Subnet) {
+        if (this.subnet == subnet && currentState != ConnectionState.DISCONNECTED) {
+            return
         }
+
+        Log.d(TAG, "Connecting to subnet")
+        setCurrentState(ConnectionState.CONNECTING)
+
+        this.subnet = subnet
+        bluetoothScanner.addScanCallback(scanCallback)
+        startScan()
     }
 
     fun connect(bluetoothConnectableDevice: BluetoothConnectableDevice, refreshBluetoothDevice: Boolean) {
         synchronized(currentState) {
-            if (networkInfo != null) {
+            if (subnet != null) {
                 disconnect()
             }
 
             Log.d(TAG, "Connecting to device")
-            setCurrentState(CONNECTION_STATE.CONNECTING)
+            setCurrentState(ConnectionState.CONNECTING)
 
             // workaround to 133 gatt issue
             // https://github.com/googlesamples/android-BluetoothLeGatt/issues/44
@@ -91,12 +82,12 @@ class NetworkConnectionLogic(private val context: Context, private val connectab
                 proxyConnection!!.connectToProxy(refreshBluetoothDevice, object : ConnectionCallback {
                     override fun success(device: ConnectableDevice) {
                         Log.d(TAG, "ConnectionCallback success")
-                        setCurrentState(CONNECTION_STATE.CONNECTED)
+                        setCurrentState(ConnectionState.CONNECTED)
                     }
 
                     override fun error(device: ConnectableDevice, error: ErrorType) {
                         Log.d(TAG, "ConnectionCallback error=$error")
-                        setCurrentState(CONNECTION_STATE.DISCONNECTED)
+                        setCurrentState(ConnectionState.DISCONNECTED)
                         connectionErrorMessage(error)
                     }
                 })
@@ -106,21 +97,27 @@ class NetworkConnectionLogic(private val context: Context, private val connectab
 
     fun disconnect() {
         Log.d(TAG, "Disconnecting")
-        networkInfo = null
+        subnet = null
         stopScan()
-        bluetoothLeScanLogic.removeScanCallback(scanCallback)
-        setCurrentState(CONNECTION_STATE.DISCONNECTED)
+        bluetoothScanner.removeScanCallback(scanCallback)
+        setCurrentState(ConnectionState.DISCONNECTED)
         bluetoothConnectableDevice?.removeDeviceConnectionCallback(this)
         bluetoothConnectableDevice = null
         proxyConnection?.disconnect(object : DisconnectionCallback {
-            override fun success(device: ConnectableDevice?) {
+            override fun success(device: ConnectableDevice) {
                 Log.d(TAG, "Disconnecting success")
             }
 
-            override fun error(device: ConnectableDevice?, error: ErrorType?) {
+            override fun error(device: ConnectableDevice, error: ErrorType) {
                 Log.d(TAG, "Disconnecting error: $error")
             }
         })
+    }
+
+    fun setEstablishedProxyConnection(proxyConnection: ProxyConnection, subnet: Subnet) {
+        this.proxyConnection = proxyConnection
+        this.subnet = subnet
+        setCurrentState(ConnectionState.CONNECTED)
     }
 
     fun setupInitialNodeConfiguration(node: Node) {
@@ -167,7 +164,7 @@ class NetworkConnectionLogic(private val context: Context, private val connectab
         synchronized(listeners) {
             listeners.add(networkConnectionListener)
 
-            notifyCurrentState()
+            notifyCurrentState(networkConnectionListener)
         }
     }
 
@@ -195,11 +192,11 @@ class NetworkConnectionLogic(private val context: Context, private val connectab
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             Log.d(TAG, result.toString())
 
-            val bluetoothConnectableDevice = BluetoothConnectableDevice(context, result, bluetoothLeScanLogic)
+            val bluetoothConnectableDevice = BluetoothConnectableDevice(context, result, bluetoothScanner)
 
             val subnets = connectableDeviceHelper.findSubnets(bluetoothConnectableDevice)
 
-            if (subnets.contains(networkInfo)) {
+            if (subnets.contains(subnet)) {
                 stopScan()
             } else {
                 return
@@ -212,41 +209,39 @@ class NetworkConnectionLogic(private val context: Context, private val connectab
     private fun startScan() {
         Log.d(TAG, "Start scanning")
 
-        networkInfo?.apply {
-            if (nodes.isEmpty()) {
-                connectionMessage(NetworkConnectionListener.MessageType.NO_NODE_IN_NETWORK)
-                return
-            }
+        if (subnet?.nodes!!.isEmpty()) {
+            notifyThereAreNoNodes()
+            return
+        }
 
-            val meshProxyService = ParcelUuid(MESH_PROXY_SERVICE)
-            if (bluetoothLeScanLogic.startLeScan(meshProxyService)) {
-                uiHandler.removeCallbacks(connectionTimeoutRunnable)
-                uiHandler.postDelayed(connectionTimeoutRunnable, 10000)
-            }
+        val meshProxyService = ParcelUuid(MESH_PROXY_SERVICE)
+        if (bluetoothScanner.startLeScan(meshProxyService)) {
+            uiHandler.removeCallbacks(connectionTimeoutRunnable)
+            uiHandler.postDelayed(connectionTimeoutRunnable, 10000)
         }
     }
 
     private fun stopScan() {
         Log.d(TAG, "Stop Scanning")
 
-        bluetoothLeScanLogic.stopLeScan()
+        bluetoothScanner.stopLeScan()
     }
 
-    private fun connetionTimeout() {
+    private fun connectionTimeout() {
         Log.d(TAG, "Connection timeout")
 
         stopScan()
-        setCurrentState(CONNECTION_STATE.DISCONNECTED)
+        setCurrentState(ConnectionState.DISCONNECTED)
         connectionErrorMessage(ErrorType(ErrorType.TYPE.COULD_NOT_CONNECT_TO_DEVICE))
     }
 
     fun isConnected(): Boolean {
         synchronized(this) {
-            return currentState == CONNECTION_STATE.CONNECTED
+            return currentState == ConnectionState.CONNECTED
         }
     }
 
-    private fun setCurrentState(currentState: CONNECTION_STATE) {
+    private fun setCurrentState(currentState: ConnectionState) {
         Log.d(TAG, "setCurrentState: $currentState")
         synchronized(this) {
             if (this.currentState == currentState) {
@@ -260,26 +255,28 @@ class NetworkConnectionLogic(private val context: Context, private val connectab
 
     private fun notifyCurrentState() {
         synchronized(listeners) {
-            uiHandler.post {
+            listeners.forEach {
+                notifyCurrentState(it)
+            }
+        }
+    }
+
+    private fun notifyCurrentState(listener: NetworkConnectionListener) {
+        uiHandler.post {
+            listener.run {
                 when (currentState) {
-                    CONNECTION_STATE.DISCONNECTED -> {
-                        listeners.forEach { listener -> listener.disconnected() }
-                    }
-                    CONNECTION_STATE.CONNECTING -> {
-                        listeners.forEach { listener -> listener.connecting() }
-                    }
-                    CONNECTION_STATE.CONNECTED -> {
-                        listeners.forEach { listener -> listener.connected() }
-                    }
+                    ConnectionState.DISCONNECTED -> disconnected()
+                    ConnectionState.CONNECTING -> connecting()
+                    ConnectionState.CONNECTED -> connected()
                 }
             }
         }
     }
 
-    private fun connectionMessage(message: NetworkConnectionListener.MessageType) {
+    private fun notifyThereAreNoNodes() {
         synchronized(listeners) {
             uiHandler.post {
-                listeners.forEach { listener -> listener.connectionMessage(message) }
+                listeners.forEach { listener -> listener.connectionMessage(NetworkConnectionListener.MessageType.NO_NODE_IN_NETWORK) }
             }
         }
     }
@@ -295,5 +292,4 @@ class NetworkConnectionLogic(private val context: Context, private val connectab
     fun getCurrentlyConnectedNode(): Node? {
         return connectableDeviceHelper.findNode(bluetoothConnectableDevice)
     }
-
 }

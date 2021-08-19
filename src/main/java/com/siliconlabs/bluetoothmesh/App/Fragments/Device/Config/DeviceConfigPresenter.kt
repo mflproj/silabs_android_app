@@ -262,80 +262,64 @@ class DeviceConfigPresenter(private val deviceConfigView: DeviceConfigView, mesh
         }
     }
 
-    private fun bindNodeToGroup(group: Group): Runnable {
-        return Runnable {
-            setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_ADDING_TO_GROUP, group.name)
-            nodeControl.bind(group, PresenterNodeControlCallback())
-        }
+    private fun bindNodeToGroup(group: Group) = Runnable {
+        setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_ADDING_TO_GROUP, group.name)
+        nodeControl.bind(group, PresenterNodeControlCallback())
     }
 
-    private fun unbindNodeFromGroup(group: Group): Runnable {
-        return Runnable {
-            setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_REMOVING_FROM_GROUP, group.name)
-            nodeControl.unbind(group, PresenterNodeControlCallback())
-        }
+    private fun unbindNodeFromGroup(group: Group) = Runnable {
+        setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_REMOVING_FROM_GROUP, group.name)
+        nodeControl.unbind(group, PresenterNodeControlCallback())
     }
 
-    private fun bindModelToGroup(model: Model, group: Group): Runnable {
-        return Runnable {
-            val functionalityBinder = FunctionalityBinder(group)
+    private fun bindModelToGroup(model: Model, group: Group) = Runnable {
+        val functionalityBinder = FunctionalityBinder(group)
 
-            setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_MODEL_ADDING, Converters.shortString(model.id))
-            functionalityBinder.bindModel(model, PresenterFunctionalityBinderCallback())
-        }
+        setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_MODEL_ADDING, Converters.shortString(model.id))
+        functionalityBinder.bindModel(model, PresenterFunctionalityBinderCallback())
     }
 
-    private fun unbindModelFromGroup(model: Model, group: Group): Runnable {
-        return Runnable {
-            val functionalityBinder = FunctionalityBinder(group)
+    private fun unbindModelFromGroup(model: Model, group: Group) = Runnable {
+        val functionalityBinder = FunctionalityBinder(group)
 
-            setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_MODEL_REMOVING, Converters.shortString(model.id))
-            functionalityBinder.unbindModel(model, PresenterFunctionalityBinderCallback())
-        }
+        setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_MODEL_REMOVING, Converters.shortString(model.id))
+        functionalityBinder.unbindModel(model, PresenterFunctionalityBinderCallback())
     }
 
-    private fun addSubscriptionSettings(model: Model, group: Group): Runnable {
-        return Runnable {
-            val subscriptionControl = SubscriptionControl(model)
-            val subscriptionSettings = SubscriptionSettings(group)
+    private fun addSubscriptionSettings(model: Model, group: Group) = Runnable {
+        val subscriptionControl = SubscriptionControl(model)
+        val subscriptionSettings = SubscriptionSettings(group)
 
-            setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_SUBSCRIPTION_ADDING, Converters.shortString(model.id))
-            subscriptionControl.addSubscriptionSettings(subscriptionSettings, PresenterSubscriptionSettingsCallback())
-        }
+        setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_SUBSCRIPTION_ADDING, Converters.shortString(model.id))
+        subscriptionControl.addSubscriptionSettings(subscriptionSettings, PresenterSubscriptionSettingsCallback())
     }
 
-    private fun removeSubscriptionSettings(model: Model, group: Group): Runnable {
-        return Runnable {
-            val subscriptionSettings = SubscriptionSettings(group)
-            val subscriptionControl = SubscriptionControl(model)
+    private fun removeSubscriptionSettings(model: Model, group: Group) = Runnable {
+        val subscriptionSettings = SubscriptionSettings(group)
+        val subscriptionControl = SubscriptionControl(model)
 
-            setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_SUBSCRIPTION_REMOVING, Converters.shortString(model.id))
-            subscriptionControl.removeSubscriptionSettings(subscriptionSettings, PresenterSubscriptionSettingsCallback())
-        }
+        setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_SUBSCRIPTION_REMOVING, Converters.shortString(model.id))
+        subscriptionControl.removeSubscriptionSettings(subscriptionSettings, PresenterSubscriptionSettingsCallback())
     }
 
-    private fun setPublicationSettings(model: Model, group: Group, functionality: DeviceFunctionality.FUNCTIONALITY): Runnable {
-        return Runnable {
-            val subscriptionControl = SubscriptionControl(model)
-            val publicationSettings = PublicationSettings(group)
-            if (functionality == DeviceFunctionality.FUNCTIONALITY.SensorServer) {
-                val publishPeriod = PublishPeriod(20, PublishPeriod.StepResolution.STEP_1_S)
-                publicationSettings.setPeriod(publishPeriod)
-            }
-            publicationSettings.ttl = 5
-
-            setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_PUBLICATION_SETTING, Converters.shortString(model.id))
-            subscriptionControl.setPublicationSettings(publicationSettings, PresenterPublicationSettingsCallback())
+    private fun setPublicationSettings(model: Model, group: Group, functionality: DeviceFunctionality.FUNCTIONALITY) = Runnable {
+        val subscriptionControl = SubscriptionControl(model)
+        val publicationSettings = PublicationSettings(group)
+        if (functionality == DeviceFunctionality.FUNCTIONALITY.SensorServer) {
+            val publishPeriod = PublishPeriod(20, PublishPeriod.StepResolution.STEP_1_S)
+            publicationSettings.setPeriod(publishPeriod)
         }
+        publicationSettings.ttl = 5
+
+        setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_PUBLICATION_SETTING, Converters.shortString(model.id))
+        subscriptionControl.setPublicationSettings(publicationSettings, PresenterPublicationSettingsCallback())
     }
 
-    private fun clearPublicationSettings(model: Model): Runnable {
-        return Runnable {
-            val subscriptionControl = SubscriptionControl(model)
+    private fun clearPublicationSettings(model: Model) = Runnable {
+        val subscriptionControl = SubscriptionControl(model)
 
-            setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_PUBLICATION_CLEARING, Converters.shortString(model.id))
-            subscriptionControl.clearPublicationSettings(PresenterPublicationSettingsCallback())
-        }
+        setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_PUBLICATION_CLEARING, Converters.shortString(model.id))
+        subscriptionControl.clearPublicationSettings(PresenterPublicationSettingsCallback())
     }
 
     fun updateCompositionData() {
@@ -362,16 +346,14 @@ class DeviceConfigPresenter(private val deviceConfigView: DeviceConfigView, mesh
         }
     }
 
-    private fun changeFunctionality(functionality: DeviceFunctionality.FUNCTIONALITY): Runnable {
-        return Runnable {
-            try {
-                setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_FUNCTIONALITY_CHANGING)
-                meshNodeManager.updateNodeFunc(meshNode, functionality)
-                takeNextTask()
-            } catch (e: NodeChangeNameException) {
-                deviceConfigView.setLoadingDialogMessage(ErrorType(ErrorType.TYPE.CANNOT_SAVE_TO_DATABASE))
-                error(e)
-            }
+    private fun changeFunctionality(functionality: DeviceFunctionality.FUNCTIONALITY) = Runnable {
+        try {
+            setLoadingDialogMessageWithSteps(LoadingDialogMessage.CONFIG_FUNCTIONALITY_CHANGING)
+            meshNodeManager.updateNodeFunc(meshNode, functionality)
+            takeNextTask()
+        } catch (e: NodeChangeNameException) {
+            deviceConfigView.setLoadingDialogMessage(ErrorType(ErrorType.TYPE.CANNOT_SAVE_TO_DATABASE))
+            error(e)
         }
     }
 

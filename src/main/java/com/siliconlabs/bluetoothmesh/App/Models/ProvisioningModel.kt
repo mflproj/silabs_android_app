@@ -14,44 +14,30 @@ import com.siliconlabs.bluetoothmesh.App.Logic.MeshLogic
 import com.siliconlabs.bluetoothmesh.App.Models.ProvisioningStatusPropagator.ProvisioningStatus
 
 class ProvisioningModel(val meshLogic: MeshLogic, val meshNodeManager: MeshNodeManager) : ProvisioningCallback {
-    private val TAG: String = javaClass.canonicalName!!
-
     val provisioningStatusPropagator = ProvisioningStatusPropagator()
 
-    internal var provisioning = false
     var selectedDevice: DeviceDescription? = null
     internal var provisioned = false
     internal var networkInfo: Subnet? = null
     private var provisionedDeviceName: String = ""
 
-    fun checkIfSelectedDeviceAlreadyAdded(): Boolean {
-        val connectableDevice = selectedDevice!!.connectable_device
+    private fun findNodeIfAlreadyAdded(): Node? {
+        val uuid = selectedDevice!!.connectable_device?.uuid ?: return null
 
-        meshLogic.currentNetwork?.let {
-            it.subnets.forEach {
-                it.nodes.forEach {
-                    if (it.uuid != null && connectableDevice?.uuid != null) {
-                        if (it.uuid!!.contentEquals(connectableDevice.uuid)) {
-                            selectedDevice!!.existed_node = it
-                            return true
-                        }
-                    }
-                }
-            }
-        }
-
-        return false
+        return meshLogic.currentNetwork?.subnets?.flatMap { it.nodes }
+                ?.find { it.uuid?.contentEquals(uuid) == true }
     }
 
     fun provisionDevice(networkInfo: Subnet, name: String) {
-        provisionedDeviceName = name
+        provisionedDeviceName = name.takeIf { it.isNotBlank() } ?: "Unknown"
         this.networkInfo = networkInfo
         meshLogic.currentSubnet = networkInfo
         provisioned = false
-        provisioning = true
 
         val connectableDevice = selectedDevice!!.connectable_device!!
-        if (checkIfSelectedDeviceAlreadyAdded()) {
+        val existingNode = findNodeIfAlreadyAdded()
+        if (existingNode != null) {
+            selectedDevice!!.existed_node = existingNode
             provisioningStatusPropagator.propagateProvisioningStatus(ProvisioningStatus.DeviceAlreadyAdded)
         } else {
             provisionDevice(connectableDevice, networkInfo)
@@ -63,28 +49,15 @@ class ProvisioningModel(val meshLogic: MeshLogic, val meshNodeManager: MeshNodeM
     }
 
     override fun success(device: ConnectableDevice, subnet: Subnet, node: Node) {
-        provisioningSuccessful(node)
-    }
-
-    override fun error(device: ConnectableDevice, subnet: Subnet, error: ErrorType) {
-        provisioningUnsuccessful(error)
-    }
-
-    fun provisioningSuccessful(node: Node) {
         meshLogic.provisionedBluetoothConnectableDevice = selectedDevice!!.connectable_device!!
         provisioned = true
-        var name = provisionedDeviceName
-        if (name.isEmpty()) {
-            name = "Unknown"
-        }
-        node.name = name
+        node.name = provisionedDeviceName
         meshLogic.deviceToConfigure = meshNodeManager.getMeshNode(node)
         provisioningStatusPropagator.propagateProvisioningStatus(ProvisioningStatus.ProvisioningSuccessful)
     }
 
-
-    fun provisioningUnsuccessful(status: ErrorType) {
-        provisioningStatusPropagator.propagateProvisioningError(ProvisioningStatus.ErrorDuringProvisioning, status)
+    override fun error(device: ConnectableDevice, subnet: Subnet, error: ErrorType) {
+        provisioningStatusPropagator.propagateProvisioningError(ProvisioningStatus.ErrorDuringProvisioning, error)
     }
 
     fun getNetworkInfo(): Subnet {

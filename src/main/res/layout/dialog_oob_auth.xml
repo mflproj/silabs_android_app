@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-  ~ Copyright © 2019 Silicon Labs, http://www.silabs.com. All rights reserved.
+  ~ Copyright © 2021 Silicon Labs, http://www.silabs.com. All rights reserved.
   -->
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -11,19 +10,19 @@
     android:theme="@style/AppTheme.Light">
 
     <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/network_name_text_input_add"
+        android:id="@+id/dialog_oob"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:errorEnabled="true">
+        android:layout_height="wrap_content">
 
-        <EditText
-            android:id="@+id/network_name_add"
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/oob_value"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/network_dialog_add_name_label"
+            android:hint="OOB Auth Data"
             android:imeOptions="actionDone"
-            android:inputType="text"
+            android:inputType="number"
             android:textSize="@dimen/dialog_value_size"  />
 
     </com.google.android.material.textfield.TextInputLayout>
+
 </LinearLayout>

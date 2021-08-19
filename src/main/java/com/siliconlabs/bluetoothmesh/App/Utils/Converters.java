@@ -9,6 +9,7 @@ import android.text.TextUtils;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 
 // Converters - converts value between different numeral system
@@ -29,21 +30,6 @@ public class Converters {
             hexChars[j * 3] = hexArray[v >>> 4];
             hexChars[j * 3 + 1] = hexArray[v & 0x0F];
             hexChars[j * 3 + 2] = ' ';
-        }
-        return new String(hexChars);
-    }
-
-    public static String getHexValueNoSpace(byte value[]) {
-        if (value == null) {
-            return "";
-        }
-
-        char[] hexChars = new char[value.length * 2];
-        int v;
-        for (int j = 0; j < value.length; j++) {
-            v = value[j] & 0xFF;
-            hexChars[j * 2] = hexArray[v >>> 4];
-            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
         }
         return new String(hexChars);
     }
@@ -213,15 +199,35 @@ public class Converters {
         return returnVal;
     }
 
-    public static byte[] convertToFloat32(String input) {
+    public static byte[] convertToUTF8(String input) {
+        byte[] returnVal = null;
         try {
-            float floatVal = Float.parseFloat(input);
-            int intBits = Float.floatToIntBits(floatVal);
-            byte[] returnVal = new byte[4];
-            returnVal[0] = (byte) (intBits & 0xff);
-            returnVal[1] = (byte) ((intBits >>> 8) & 0xff);
-            returnVal[2] = (byte) ((intBits >>> 16) & 0xff);
-            returnVal[3] = (byte) ((intBits >>> 24) & 0xff);
+            returnVal = input.getBytes("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            returnVal = input.getBytes();
+            e.printStackTrace();
+        }
+        return returnVal;
+    }
+
+    public static byte[] convertToUTF16(String input) {
+        byte[] returnVal = null;
+        try {
+            returnVal = input.getBytes("UTF-16");
+        } catch (UnsupportedEncodingException e) {
+            returnVal = input.getBytes();
+            e.printStackTrace();
+        }
+        return returnVal;
+    }
+
+    public static byte[] convertToUint8(String input) {
+        try {
+            int val = Integer.parseInt(input);
+
+            byte[] returnVal = new byte[1];
+            returnVal[0] = (byte) (val & 0xFF);
+
             return returnVal;
         } catch (Exception e) {
             e.printStackTrace();
@@ -229,19 +235,84 @@ public class Converters {
         }
     }
 
-    public static byte[] convertToFloat64(String input) {
+    public static byte[] convertToUint16(String input) {
         try {
-            double floatVal = Double.parseDouble(input);
-            long longBits = Double.doubleToLongBits(floatVal);
-            byte[] returnVal = new byte[8];
-            returnVal[0] = (byte) (longBits & 0xff);
-            returnVal[1] = (byte) ((longBits >>> 8) & 0xff);
-            returnVal[2] = (byte) ((longBits >>> 16) & 0xff);
-            returnVal[3] = (byte) ((longBits >>> 24) & 0xff);
-            returnVal[4] = (byte) ((longBits >>> 32) & 0xff);
-            returnVal[5] = (byte) ((longBits >>> 40) & 0xff);
-            returnVal[6] = (byte) ((longBits >>> 48) & 0xff);
-            returnVal[7] = (byte) ((longBits >>> 56) & 0xff);
+            int val = Integer.parseInt(input);
+
+            byte[] returnVal = new byte[2];
+            returnVal[0] = (byte) (val & 0xFF);
+            returnVal[1] = (byte) ((val >>> 8) & 0xFF);
+
+            return returnVal;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return input.getBytes();
+        }
+    }
+
+    public static byte[] convertToUint24(String input) {
+        try {
+            int val = Integer.parseInt(input);
+
+            byte[] returnVal = new byte[3];
+            returnVal[0] = (byte) (val & 0xFF);
+            returnVal[1] = (byte) ((val >>> 8) & 0xFF);
+            returnVal[2] = (byte) ((val >>> 16) & 0xFF);
+
+            return returnVal;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return input.getBytes();
+        }
+    }
+
+    public static byte[] convertToUint32(String input) {
+        try {
+            long val = Long.parseLong(input);
+
+            byte[] returnVal = new byte[4];
+            returnVal[0] = (byte) (val & 0xFF);
+            returnVal[1] = (byte) ((val >>> 8) & 0xFF);
+            returnVal[2] = (byte) ((val >>> 16) & 0xFF);
+            returnVal[3] = (byte) ((val >>> 24) & 0xFF);
+
+            return returnVal;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return input.getBytes();
+        }
+    }
+
+    public static byte[] convertToUint40(String input) {
+        try {
+            long val = Long.parseLong(input);
+
+            byte[] returnVal = new byte[5];
+            returnVal[0] = (byte) (val & 0xFF);
+            returnVal[1] = (byte) ((val >>> 8) & 0xFF);
+            returnVal[2] = (byte) ((val >>> 16) & 0xFF);
+            returnVal[3] = (byte) ((val >>> 24) & 0xFF);
+            returnVal[4] = (byte) ((val >>> 32) & 0xFF);
+
+            return returnVal;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return input.getBytes();
+        }
+    }
+
+    public static byte[] convertToUint48(String input) {
+        try {
+            long val = Long.parseLong(input);
+
+            byte[] returnVal = new byte[6];
+            returnVal[0] = (byte) (val & 0xFF);
+            returnVal[1] = (byte) ((val >>> 8) & 0xFF);
+            returnVal[2] = (byte) ((val >>> 16) & 0xFF);
+            returnVal[3] = (byte) ((val >>> 24) & 0xFF);
+            returnVal[4] = (byte) ((val >>> 32) & 0xFF);
+            returnVal[5] = (byte) ((val >>> 40) & 0xFF);
+
             return returnVal;
         } catch (Exception e) {
             e.printStackTrace();
@@ -348,61 +419,15 @@ public class Converters {
         }
     }
 
-    public static byte[] convertToUint8(String input) {
+    public static byte[] convertToFloat32(String input) {
         try {
-            int val = Integer.parseInt(input);
-
-            byte[] returnVal = new byte[1];
-            returnVal[0] = (byte) (val & 0xFF);
-
-            return returnVal;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return input.getBytes();
-        }
-    }
-
-    public static byte[] convertToUint16(String input) {
-        try {
-            int val = Integer.parseInt(input);
-
-            byte[] returnVal = new byte[2];
-            returnVal[0] = (byte) (val & 0xFF);
-            returnVal[1] = (byte) ((val >>> 8) & 0xFF);
-
-            return returnVal;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return input.getBytes();
-        }
-    }
-
-    public static byte[] convertToUint24(String input) {
-        try {
-            int val = Integer.parseInt(input);
-
-            byte[] returnVal = new byte[3];
-            returnVal[0] = (byte) (val & 0xFF);
-            returnVal[1] = (byte) ((val >>> 8) & 0xFF);
-            returnVal[2] = (byte) ((val >>> 16) & 0xFF);
-
-            return returnVal;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return input.getBytes();
-        }
-    }
-
-    public static byte[] convertToUint32(String input) {
-        try {
-            long val = Long.parseLong(input);
-
+            float floatVal = Float.parseFloat(input);
+            int intBits = Float.floatToIntBits(floatVal);
             byte[] returnVal = new byte[4];
-            returnVal[0] = (byte) (val & 0xFF);
-            returnVal[1] = (byte) ((val >>> 8) & 0xFF);
-            returnVal[2] = (byte) ((val >>> 16) & 0xFF);
-            returnVal[3] = (byte) ((val >>> 24) & 0xFF);
-
+            returnVal[0] = (byte) (intBits & 0xff);
+            returnVal[1] = (byte) ((intBits >>> 8) & 0xff);
+            returnVal[2] = (byte) ((intBits >>> 16) & 0xff);
+            returnVal[3] = (byte) ((intBits >>> 24) & 0xff);
             return returnVal;
         } catch (Exception e) {
             e.printStackTrace();
@@ -410,63 +435,24 @@ public class Converters {
         }
     }
 
-    public static byte[] convertToUint40(String input) {
+    public static byte[] convertToFloat64(String input) {
         try {
-            long val = Long.parseLong(input);
-
-            byte[] returnVal = new byte[5];
-            returnVal[0] = (byte) (val & 0xFF);
-            returnVal[1] = (byte) ((val >>> 8) & 0xFF);
-            returnVal[2] = (byte) ((val >>> 16) & 0xFF);
-            returnVal[3] = (byte) ((val >>> 24) & 0xFF);
-            returnVal[4] = (byte) ((val >>> 32) & 0xFF);
-
+            double floatVal = Double.parseDouble(input);
+            long longBits = Double.doubleToLongBits(floatVal);
+            byte[] returnVal = new byte[8];
+            returnVal[0] = (byte) (longBits & 0xff);
+            returnVal[1] = (byte) ((longBits >>> 8) & 0xff);
+            returnVal[2] = (byte) ((longBits >>> 16) & 0xff);
+            returnVal[3] = (byte) ((longBits >>> 24) & 0xff);
+            returnVal[4] = (byte) ((longBits >>> 32) & 0xff);
+            returnVal[5] = (byte) ((longBits >>> 40) & 0xff);
+            returnVal[6] = (byte) ((longBits >>> 48) & 0xff);
+            returnVal[7] = (byte) ((longBits >>> 56) & 0xff);
             return returnVal;
         } catch (Exception e) {
             e.printStackTrace();
             return input.getBytes();
         }
-    }
-
-    public static byte[] convertToUint48(String input) {
-        try {
-            long val = Long.parseLong(input);
-
-            byte[] returnVal = new byte[6];
-            returnVal[0] = (byte) (val & 0xFF);
-            returnVal[1] = (byte) ((val >>> 8) & 0xFF);
-            returnVal[2] = (byte) ((val >>> 16) & 0xFF);
-            returnVal[3] = (byte) ((val >>> 24) & 0xFF);
-            returnVal[4] = (byte) ((val >>> 32) & 0xFF);
-            returnVal[5] = (byte) ((val >>> 40) & 0xFF);
-
-            return returnVal;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return input.getBytes();
-        }
-    }
-
-    public static byte[] convertToUTF8(String input) {
-        byte[] returnVal = null;
-        try {
-            returnVal = input.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            returnVal = input.getBytes();
-            e.printStackTrace();
-        }
-        return returnVal;
-    }
-
-    public static byte[] convertToUTF16(String input) {
-        byte[] returnVal = null;
-        try {
-            returnVal = input.getBytes("UTF-16");
-        } catch (UnsupportedEncodingException e) {
-            returnVal = input.getBytes();
-            e.printStackTrace();
-        }
-        return returnVal;
     }
 
     public static byte[] reverse(byte[] array) {
@@ -501,23 +487,12 @@ public class Converters {
     }
 
     public static byte[] hexToByteArray(String hex) {
-        int len = hex.length() / 2;
-        if (len == 0 || hex.length() % 2 != 0) {
-            len += 1;
-            hex = "0" + hex;
+        int len = hex.length();
+        byte[] bytes = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            bytes[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4) + Character.digit(hex.charAt(i + 1), 16));
         }
-
-        byte byteArr[] = new byte[len];
-        for (int i = 0; i < byteArr.length; i++) {
-            int init = i * 2;
-            int end = init + 2;
-            if (end > hex.length()) {
-                end = init + 1;
-            }
-            int temp = Integer.parseInt(hex.substring(init, end), 16);
-            byteArr[i] = (byte) (temp & 0xFF);
-        }
-        return byteArr;
+        return bytes;
     }
 
     public static Byte[] wrapByteArray(byte[] bytes) {
@@ -553,15 +528,15 @@ public class Converters {
     }
 
     public static byte[] inv_atou16(int value) {
-        return new byte[] {(byte) (value >> 8),
-                (byte) value};
+        return new byte[]{
+                (byte) (value >> 8), (byte) value
+        };
     }
 
     public static byte[] inv_atou32(int value) {
-        return new byte[] {(byte) (value >> 24),
-                (byte) (value >> 16),
-                (byte) (value >> 8),
-                (byte) value};
+        return new byte[]{
+                (byte) (value >> 24), (byte) (value >> 16), (byte) (value >> 8), (byte) value
+        };
     }
 
     public static String shortString(int toString) {
@@ -569,6 +544,21 @@ public class Converters {
         byte[] b_value = {(byte) (value >> 8), (byte) (value & 0xff)};
         String ret = Converters.getHexValueNoSpace(b_value);
         return ret;
+    }
+
+    public static String getHexValueNoSpace(byte value[]) {
+        if (value == null) {
+            return "";
+        }
+
+        char[] hexChars = new char[value.length * 2];
+        int v;
+        for (int j = 0; j < value.length; j++) {
+            v = value[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        return new String(hexChars);
     }
 
     //
@@ -605,6 +595,15 @@ public class Converters {
         return Float.intBitsToFloat(convertInt32ToInt(bytes, offset));
     }
 
+    public static int convertInt32ToInt(byte[] bytes, int offset) {
+        final int component1 = bytes[offset] & 0x000000FF;
+        final int component2 = bytes[1 + offset] << 8 & 0x0000FF00;
+        final int component3 = bytes[2 + offset] << 16 & 0x00FF0000;
+        final int component4 = bytes[3 + offset] << 24 & 0xFF000000;
+
+        return component1 | component2 | component3 | component4;
+    }
+
     public static int convertInt8ToInt(byte[] bytes, int offset) {
         int fillUp = bytes[offset] >= 0 ? 0 : -1;
 
@@ -638,42 +637,6 @@ public class Converters {
         return component1 | component2 | component3 | component4;
     }
 
-    public static int convertInt32ToInt(byte[] bytes, int offset) {
-        final int component1 = bytes[offset] & 0x000000FF;
-        final int component2 = bytes[1 + offset] << 8 & 0x0000FF00;
-        final int component3 = bytes[2 + offset] << 16 & 0x00FF0000;
-        final int component4 = bytes[3 + offset] << 24 & 0xFF000000;
-
-        return component1 | component2 | component3 | component4;
-    }
-
-    public static byte[] convertIntToInt8(int value) {
-        final byte[] bytes = new byte[1];
-
-        bytes[0] = (byte) (value);
-
-        return bytes;
-    }
-
-    public static byte[] convertIntToInt16(int value) {
-        final byte[] bytes = new byte[2];
-
-        bytes[0] = (byte) (value);
-        bytes[1] = (byte) (value >> 8);
-
-        return bytes;
-    }
-
-    public static byte[] convertIntToInt24(int value) {
-        final byte[] bytes = new byte[3];
-
-        bytes[0] = (byte) (value);
-        bytes[1] = (byte) (value >> 8);
-        bytes[2] = (byte) (value >> 16);
-
-        return bytes;
-    }
-
     public static byte[] convertFloatToByteArray(float value) {
         final byte[] bytes = new byte[4];
 
@@ -700,11 +663,38 @@ public class Converters {
         return convertIntToInt8(value);
     }
 
+    public static byte[] convertIntToInt8(int value) {
+        final byte[] bytes = new byte[1];
+
+        bytes[0] = (byte) (value);
+
+        return bytes;
+    }
+
     public static byte[] convertIntToUint16(int value) {
         return convertIntToInt16(value);
     }
 
+    public static byte[] convertIntToInt16(int value) {
+        final byte[] bytes = new byte[2];
+
+        bytes[0] = (byte) (value);
+        bytes[1] = (byte) (value >> 8);
+
+        return bytes;
+    }
+
     public static byte[] convertIntToUint24(int value) {
         return convertIntToInt24(value);
+    }
+
+    public static byte[] convertIntToInt24(int value) {
+        final byte[] bytes = new byte[3];
+
+        bytes[0] = (byte) (value);
+        bytes[1] = (byte) (value >> 8);
+        bytes[2] = (byte) (value >> 16);
+
+        return bytes;
     }
 }

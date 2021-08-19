@@ -59,7 +59,7 @@ class AppModule {
 
     @Provides
     @Singleton
-    fun provideProvisioningModel(meshLogic: MeshLogic, meshNodeManager: MeshNodeManager): ProvisioningModel {
+    fun provideProvisioningModel(meshLogic: MeshLogic, meshNodeManager: MeshNodeManager, networkConnectionLogic: NetworkConnectionLogic): ProvisioningModel {
         return ProvisioningModel(meshLogic, meshNodeManager)
     }
 
